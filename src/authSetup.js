@@ -42,8 +42,12 @@ function writeUsers(users) {
 }
 
 function cookieBaseOptions() {
-  const secure = process.env.NODE_ENV === "production";
-  return { httpOnly: true, sameSite: "lax", path: "/", secure };
+  // Vercel (or any other origin) calling Render: browsers require SameSite=None for cross-site credentialed fetch.
+  // Set SESSION_COOKIE_SAMESITE=none on the API host in production. Omit locally (defaults to lax + Vite proxy).
+  const crossSite = String(process.env.SESSION_COOKIE_SAMESITE || "").toLowerCase() === "none";
+  const sameSite = crossSite ? "none" : "lax";
+  const secure = crossSite ? true : process.env.NODE_ENV === "production";
+  return { httpOnly: true, sameSite, path: "/", secure };
 }
 
 function issueToken(user) {
