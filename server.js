@@ -27,7 +27,13 @@ const upload = multer({
 
 const datasets = new Map();
 
-app.use(cors({ origin: true, credentials: true }));
+app.use(
+  cors({
+    origin: true,
+    credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 app.use(cookieParser());
 app.use(express.json({ limit: "2mb" }));
 registerAuthRoutes(app);

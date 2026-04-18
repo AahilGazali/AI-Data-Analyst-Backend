@@ -69,10 +69,20 @@ export function verifySessionToken(token) {
   return jwt.verify(token, getJwtSecret());
 }
 
+function getSessionTokenFromRequest(req) {
+  const auth = req.headers.authorization;
+  if (auth && typeof auth === "string" && auth.startsWith("Bearer ")) {
+    const t = auth.slice(7).trim();
+    if (t) return t;
+  }
+  const c = req.cookies?.[SESSION_COOKIE];
+  return typeof c === "string" && c ? c : null;
+}
+
 export function requireAuth(req, res, next) {
   try {
-    const raw = req.cookies?.[SESSION_COOKIE];
-    if (!raw || typeof raw !== "string") {
+    const raw = getSessionTokenFromRequest(req);
+    if (!raw) {
       return res.status(401).json({ error: "Sign in required" });
     }
     const payload = verifySessionToken(raw);
@@ -136,7 +146,10 @@ export function registerAuthRoutes(app) {
 
       const token = issueToken({ id: user.id, email: user.email });
       setSessionCookie(res, token);
-      return res.json({ user: { id: user.id, email: user.email } });
+      return res.json({
+        user: { id: user.id, email: user.email },
+        token,
+      });
     } catch (err) {
       console.error("[auth login]", err);
       return res.status(500).json({ error: "Could not sign in" });
@@ -150,8 +163,8 @@ export function registerAuthRoutes(app) {
 
   app.get("/api/auth/me", (req, res) => {
     try {
-      const raw = req.cookies?.[SESSION_COOKIE];
-      if (!raw || typeof raw !== "string") {
+      const raw = getSessionTokenFromRequest(req);
+      if (!raw) {
         return res.json({ user: null });
       }
       const payload = verifySessionToken(raw);
